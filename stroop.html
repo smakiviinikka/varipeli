@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Väripeli (Stroop)</title>
+  <title>Stroop-väripeli</title>
 
   <style>
     body {
@@ -12,23 +12,13 @@
       margin: 10px;
     }
 
-    #logoTitle {
-      font-size: clamp(24px, 6vw, 36px);
-      font-weight: bold;
-      letter-spacing: 2px;
-    }
-
-    #logoTitle span {
-      color: #4caf50;
-    }
-
-    #logoSub {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 5px;
+    h1 {
+      font-size: clamp(28px, 6vw, 40px);
+      margin-bottom: 10px;
     }
 
     #instructions {
+      font-weight: bold;
       font-size: clamp(16px, 4vw, 20px);
       margin-bottom: 15px;
       color: #333;
@@ -87,18 +77,36 @@
       display: none;
     }
 
-    #highscore {
+    #finalMessage {
       font-size: clamp(16px, 4vw, 20px);
-      margin-top: 12px;
+      margin-top: 8px;
       color: #444;
+    }
+
+    #logoFooter {
+      margin-top: 40px;
+    }
+
+    #logoFooter span {
+      color: #4caf50;
+      font-weight: bold;
+    }
+
+    #logoFooter .logoText {
+      font-size: 20px; /* Logo isompi */
+      font-weight: bold;
+    }
+
+    #logoFooter .collabLabel {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
 
-  <div id="logoTitle">Sami <span>×</span> ChatGPT</div>
-  <div id="logoSub">Yhteistyössä tehty Stroop-väripeli</div>
-
+  <h1>Stroop-väripeli</h1>
   <div id="instructions">
     Napauta sitä väriä, jolla alla oleva teksti on kirjoitettu.
   </div>
@@ -120,9 +128,13 @@
   </div>
 
   <div id="gameOver"></div>
+  <div id="finalMessage"></div>
   <button id="retryButton" onclick="startGame()">Yritä uudelleen</button>
 
-  <div id="highscore">Parhaat pisteesi: –</div>
+  <div id="logoFooter">
+    <div class="collabLabel">Yhteistyössä:</div>
+    <div class="logoText">Sami <span>×</span> ChatGPT</div>
+  </div>
 
   <script>
     const basicWordColors = [
@@ -155,6 +167,7 @@
 
       document.getElementById("retryButton").style.display = "none";
       document.getElementById("gameOver").textContent = "";
+      document.getElementById("finalMessage").textContent = "";
 
       updateScore();
       nextWord();
@@ -168,11 +181,9 @@
         return;
       }
 
-      // Sanapool
       const wordPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
       const word = wordPool[Math.floor(Math.random() * wordPool.length)];
 
-      // Väri, jolla sana kirjoitetaan
       const colorPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
       const color = colorPool[Math.floor(Math.random() * colorPool.length)];
       correctColor = color.value;
@@ -180,14 +191,11 @@
       document.getElementById("word").textContent = word.name;
       document.getElementById("word").style.color = color.value;
 
-      // Päivitä napit
       let buttonColors;
       if(index < 2){
         buttonColors = [...answerColors];
       } else {
         buttonColors = shuffleArray([...basicWordColors, ...extraColors]);
-
-        // Varmistetaan, että oikea väri sisältyy nappeihin
         if(!buttonColors.slice(0,4).some(b => b.value === correctColor)){
           buttonColors[0] = colorPool.find(b => b.value === correctColor);
         }
@@ -241,23 +249,23 @@
     }
 
     function updateScore(){
-      const extra = score >= 10 ? " (Oho! Aika kovat pojot!)" : "";
-      document.getElementById("score").textContent = `Pisteet: ${score} / 16${extra}`;
+      document.getElementById("score").textContent = `Pisteet: ${score} / 16`;
 
       const storedHigh = localStorage.getItem('highscore');
       if(!storedHigh || score>storedHigh){
         localStorage.setItem('highscore',score);
       }
-
-      const highDisplay = localStorage.getItem('highscore') || "–";
-      document.getElementById('highscore').textContent = "Parhaat pisteesi: " + highDisplay;
     }
 
     function endGame(message){
       running=false;
       clearInterval(timer);
       document.getElementById("word").textContent="";
-      document.getElementById("gameOver").textContent=message + ` Lopulliset pisteesi: ${score}`;
+      document.getElementById("gameOver").textContent = message;
+      
+      let extra = score >= 10 ? " (Oho! Aika kovat pojot!)" : "";
+      document.getElementById("finalMessage").textContent = `Lopulliset pisteesi: ${score}${extra}`;
+
       document.getElementById("retryButton").style.display="inline-block";
     }
 
@@ -266,6 +274,7 @@
       clearInterval(timer);
       document.getElementById("word").textContent="";
       document.getElementById("gameOver").textContent="🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
+      document.getElementById("finalMessage").textContent = `Lopulliset pisteesi: ${score} (Oho! Aika kovat pojot!)`;
       document.getElementById("retryButton").style.display="inline-block";
     }
 
