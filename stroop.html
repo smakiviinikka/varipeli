@@ -25,7 +25,13 @@
     #logoSub {
       font-size: 14px;
       color: #666;
+      margin-bottom: 5px;
+    }
+
+    #instructions {
+      font-size: clamp(16px, 4vw, 20px);
       margin-bottom: 15px;
+      color: #333;
     }
 
     #score, #timerText {
@@ -80,6 +86,12 @@
       font-size: 18px;
       display: none;
     }
+
+    #highscore {
+      font-size: clamp(16px, 4vw, 20px);
+      margin-top: 12px;
+      color: #444;
+    }
   </style>
 </head>
 <body>
@@ -87,16 +99,20 @@
   <div id="logoTitle">Sami <span>×</span> ChatGPT</div>
   <div id="logoSub">Yhteistyössä tehty Stroop-väripeli</div>
 
+  <div id="instructions">
+    Napauta sitä väriä, jolla alla oleva teksti on kirjoitettu.
+  </div>
+
   <div id="score">Pisteet: 0 / 16</div>
   <div id="timerText"></div>
 
   <div id="word"></div>
 
   <div class="buttons">
-    <button onclick="answer('red')">PUNAINEN</button>
-    <button onclick="answer('blue')">SININEN</button>
-    <button onclick="answer('green')">VIHREÄ</button>
-    <button onclick="answer('yellow')">KELTAINEN</button>
+    <button>PUNAINEN</button>
+    <button>SININEN</button>
+    <button>VIHREÄ</button>
+    <button>KELTAINEN</button>
   </div>
 
   <div id="timeBarContainer">
@@ -106,8 +122,9 @@
   <div id="gameOver"></div>
   <button id="retryButton" onclick="startGame()">Yritä uudelleen</button>
 
+  <div id="highscore">Parhaat pisteesi: –</div>
+
   <script>
-    /* Sanat, joita näytetään */
     const basicWordColors = [
       { name: "PUNAINEN", value: "red" },
       { name: "SININEN", value: "blue" },
@@ -115,34 +132,21 @@
       { name: "KELTAINEN", value: "yellow" }
     ];
 
-    const allWordColors = [
-      ...basicWordColors,
+    const extraColors = [
       { name: "RUSKEA", value: "brown" },
       { name: "VIOLETTI", value: "purple" }
     ];
 
-    /* Vastausnapit (aina vain 4) */
-    const answerColors = [
-      { name: "PUNAINEN", value: "red" },
-      { name: "SININEN", value: "blue" },
-      { name: "VIHREÄ", value: "green" },
-      { name: "KELTAINEN", value: "yellow" }
-    ];
+    const answerColors = [...basicWordColors];
 
-    /* Aikarajat (2 kysymystä per taso) */
     const timeLevels = [
-      5, 5,
-      4, 4,
-      3, 3,
-      2.5, 2.5,
-      2, 2,
-      1.5, 1.5,
-      1, 1,
-      0.5, 0.5
+      5,5,4,4,3,3,2.5,2.5,2,2,1.5,1.5,1,1,0.5,0.5
     ];
 
     let index, score, correctColor;
     let timer, timeLeft, maxTime, running;
+
+    const buttons = document.querySelectorAll(".buttons button");
 
     function startGame() {
       index = 0;
@@ -164,52 +168,69 @@
         return;
       }
 
-      /* Ensimmäiset 2 kysymystä ilman ruskeaa ja violettia */
-      const wordPool = index < 2 ? basicWordColors : allWordColors;
-
+      // Sanapool
+      const wordPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
       const word = wordPool[Math.floor(Math.random() * wordPool.length)];
-      const color = answerColors[Math.floor(Math.random() * answerColors.length)];
 
-      const wordDiv = document.getElementById("word");
-      wordDiv.textContent = word.name;
-      wordDiv.style.color = color.value;
-
+      // Väri, jolla sana kirjoitetaan
+      const colorPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
+      const color = colorPool[Math.floor(Math.random() * colorPool.length)];
       correctColor = color.value;
+
+      document.getElementById("word").textContent = word.name;
+      document.getElementById("word").style.color = color.value;
+
+      // Päivitä napit
+      let buttonColors;
+      if(index < 2){
+        buttonColors = [...answerColors];
+      } else {
+        buttonColors = shuffleArray([...basicWordColors, ...extraColors]);
+
+        // Varmistetaan, että oikea väri sisältyy nappeihin
+        if(!buttonColors.slice(0,4).some(b => b.value === correctColor)){
+          buttonColors[0] = colorPool.find(b => b.value === correctColor);
+        }
+        buttonColors = buttonColors.slice(0,4);
+      }
+
+      buttons.forEach((btn,i)=>{
+        btn.textContent = buttonColors[i].name;
+        btn.onclick = ()=>answer(buttonColors[i].value);
+      });
 
       maxTime = timeLevels[index];
       timeLeft = maxTime;
-
       startTimer();
+    }
+
+    function shuffleArray(array) {
+      return array.sort(() => Math.random() - 0.5);
     }
 
     function startTimer() {
       updateTimer();
-
       timer = setInterval(() => {
         timeLeft -= 0.1;
-
         if (timeLeft <= 0) {
           endGame("Aika loppui! 😵");
         }
-
         updateTimer();
-      }, 100);
+      },100);
     }
 
     function updateTimer() {
       document.getElementById("timerText").textContent =
-        `Aikaa: ${Math.max(timeLeft, 0).toFixed(1)} s`;
-
+        `Aikaa: ${Math.max(timeLeft,0).toFixed(1)} s`;
       document.getElementById("timeBar").style.width =
-        (timeLeft / maxTime) * 100 + "%";
+        (timeLeft/maxTime)*100 + "%";
     }
 
-    function answer(choice) {
-      if (!running) return;
-
+    function answer(choice){
+      if(!running) return;
       clearInterval(timer);
 
-      if (choice === correctColor) {
+      if(choice === correctColor){
         score++;
         index++;
         updateScore();
@@ -219,32 +240,33 @@
       }
     }
 
-    function updateScore() {
-      const extra = score >= 10
-        ? " (Oho! Aika kovat pojot!)"
-        : "";
+    function updateScore(){
+      const extra = score >= 10 ? " (Oho! Aika kovat pojot!)" : "";
+      document.getElementById("score").textContent = `Pisteet: ${score} / 16${extra}`;
 
-      document.getElementById("score").textContent =
-        `Pisteet: ${score} / 16${extra}`;
+      const storedHigh = localStorage.getItem('highscore');
+      if(!storedHigh || score>storedHigh){
+        localStorage.setItem('highscore',score);
+      }
+
+      const highDisplay = localStorage.getItem('highscore') || "–";
+      document.getElementById('highscore').textContent = "Parhaat pisteesi: " + highDisplay;
     }
 
-    function endGame(message) {
-      running = false;
+    function endGame(message){
+      running=false;
       clearInterval(timer);
-
-      document.getElementById("word").textContent = "";
-      document.getElementById("gameOver").textContent = message;
-      document.getElementById("retryButton").style.display = "inline-block";
+      document.getElementById("word").textContent="";
+      document.getElementById("gameOver").textContent=message + ` Lopulliset pisteesi: ${score}`;
+      document.getElementById("retryButton").style.display="inline-block";
     }
 
-    function winGame() {
-      running = false;
+    function winGame(){
+      running=false;
       clearInterval(timer);
-
-      document.getElementById("word").textContent = "";
-      document.getElementById("gameOver").textContent =
-        "🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
-      document.getElementById("retryButton").style.display = "inline-block";
+      document.getElementById("word").textContent="";
+      document.getElementById("gameOver").textContent="🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
+      document.getElementById("retryButton").style.display="inline-block";
     }
 
     startGame();
