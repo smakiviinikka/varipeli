@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Väripeli (Stroop)</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 10px;
+    }
+
+    #logoTitle {
+      font-size: clamp(24px, 6vw, 36px);
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    #logoTitle span {
+      color: #4caf50;
+    }
+
+    #logoSub {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    #score, #timerText {
+      font-size: clamp(16px, 4vw, 20px);
+      margin-bottom: 8px;
+    }
+
+    #word {
+      font-size: clamp(32px, 10vw, 52px);
+      font-weight: bold;
+      margin: 25px 0;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    button {
+      padding: 18px;
+      font-size: clamp(16px, 4vw, 20px);
+      cursor: pointer;
+    }
+
+    #timeBarContainer {
+      width: 90%;
+      height: 18px;
+      background: #ddd;
+      margin: 25px auto;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #timeBar {
+      height: 100%;
+      background: #4caf50;
+      transition: width 0.1s linear;
+    }
+
+    #gameOver {
+      font-size: clamp(18px, 5vw, 26px);
+      font-weight: bold;
+      margin-top: 25px;
+    }
+
+    #retryButton {
+      margin-top: 15px;
+      padding: 12px 25px;
+      font-size: 18px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="logoTitle">Sami <span>×</span> ChatGPT</div>
+  <div id="logoSub">Yhteistyössä tehty Stroop-väripeli</div>
+
+  <div id="score">Pisteet: 0 / 16</div>
+  <div id="timerText"></div>
+
+  <div id="word"></div>
+
+  <div class="buttons">
+    <button onclick="answer('red')">PUNAINEN</button>
+    <button onclick="answer('blue')">SININEN</button>
+    <button onclick="answer('green')">VIHREÄ</button>
+    <button onclick="answer('yellow')">KELTAINEN</button>
+  </div>
+
+  <div id="timeBarContainer">
+    <div id="timeBar"></div>
+  </div>
+
+  <div id="gameOver"></div>
+  <button id="retryButton" onclick="startGame()">Yritä uudelleen</button>
+
+  <script>
+    /* Sanat, joita näytetään */
+    const basicWordColors = [
+      { name: "PUNAINEN", value: "red" },
+      { name: "SININEN", value: "blue" },
+      { name: "VIHREÄ", value: "green" },
+      { name: "KELTAINEN", value: "yellow" }
+    ];
+
+    const allWordColors = [
+      ...basicWordColors,
+      { name: "RUSKEA", value: "brown" },
+      { name: "VIOLETTI", value: "purple" }
+    ];
+
+    /* Vastausnapit (aina vain 4) */
+    const answerColors = [
+      { name: "PUNAINEN", value: "red" },
+      { name: "SININEN", value: "blue" },
+      { name: "VIHREÄ", value: "green" },
+      { name: "KELTAINEN", value: "yellow" }
+    ];
+
+    /* Aikarajat (2 kysymystä per taso) */
+    const timeLevels = [
+      5, 5,
+      4, 4,
+      3, 3,
+      2.5, 2.5,
+      2, 2,
+      1.5, 1.5,
+      1, 1,
+      0.5, 0.5
+    ];
+
+    let index, score, correctColor;
+    let timer, timeLeft, maxTime, running;
+
+    function startGame() {
+      index = 0;
+      score = 0;
+      running = true;
+
+      document.getElementById("retryButton").style.display = "none";
+      document.getElementById("gameOver").textContent = "";
+
+      updateScore();
+      nextWord();
+    }
+
+    function nextWord() {
+      if (!running) return;
+
+      if (index >= timeLevels.length) {
+        winGame();
+        return;
+      }
+
+      /* Ensimmäiset 2 kysymystä ilman ruskeaa ja violettia */
+      const wordPool = index < 2 ? basicWordColors : allWordColors;
+
+      const word = wordPool[Math.floor(Math.random() * wordPool.length)];
+      const color = answerColors[Math.floor(Math.random() * answerColors.length)];
+
+      const wordDiv = document.getElementById("word");
+      wordDiv.textContent = word.name;
+      wordDiv.style.color = color.value;
+
+      correctColor = color.value;
+
+      maxTime = timeLevels[index];
+      timeLeft = maxTime;
+
+      startTimer();
+    }
+
+    function startTimer() {
+      updateTimer();
+
+      timer = setInterval(() => {
+        timeLeft -= 0.1;
+
+        if (timeLeft <= 0) {
+          endGame("Aika loppui! 😵");
+        }
+
+        updateTimer();
+      }, 100);
+    }
+
+    function updateTimer() {
+      document.getElementById("timerText").textContent =
+        `Aikaa: ${Math.max(timeLeft, 0).toFixed(1)} s`;
+
+      document.getElementById("timeBar").style.width =
+        (timeLeft / maxTime) * 100 + "%";
+    }
+
+    function answer(choice) {
+      if (!running) return;
+
+      clearInterval(timer);
+
+      if (choice === correctColor) {
+        score++;
+        index++;
+        updateScore();
+        nextWord();
+      } else {
+        endGame("Väärä vastaus! ❌");
+      }
+    }
+
+    function updateScore() {
+      const extra = score >= 10
+        ? " (Oho! Aika kovat pojot!)"
+        : "";
+
+      document.getElementById("score").textContent =
+        `Pisteet: ${score} / 16${extra}`;
+    }
+
+    function endGame(message) {
+      running = false;
+      clearInterval(timer);
+
+      document.getElementById("word").textContent = "";
+      document.getElementById("gameOver").textContent = message;
+      document.getElementById("retryButton").style.display = "inline-block";
+    }
+
+    function winGame() {
+      running = false;
+      clearInterval(timer);
+
+      document.getElementById("word").textContent = "";
+      document.getElementById("gameOver").textContent =
+        "🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
+      document.getElementById("retryButton").style.display = "inline-block";
+    }
+
+    startGame();
+  </script>
+
+</body>
+</html>
