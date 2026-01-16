@@ -14,14 +14,13 @@
 
     h1 {
       font-size: clamp(28px, 6vw, 40px);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     #instructions {
       font-weight: bold;
       font-size: clamp(16px, 4vw, 20px);
       margin-bottom: 15px;
-      color: #333;
     }
 
     #score, #timerText {
@@ -70,6 +69,12 @@
       margin-top: 25px;
     }
 
+    #finalMessage {
+      font-size: clamp(16px, 4vw, 20px);
+      margin-top: 8px;
+      color: #444;
+    }
+
     #retryButton {
       margin-top: 15px;
       padding: 12px 25px;
@@ -77,30 +82,29 @@
       display: none;
     }
 
-    #finalMessage {
-      font-size: clamp(16px, 4vw, 20px);
-      margin-top: 8px;
-      color: #444;
+    #highscore {
+      margin-top: 30px;
+      font-size: 18px;
+      color: #333;
     }
 
     #logoFooter {
       margin-top: 40px;
     }
 
-    #logoFooter span {
-      color: #4caf50;
-      font-weight: bold;
-    }
-
-    #logoFooter .logoText {
-      font-size: 20px; /* Logo isompi */
-      font-weight: bold;
-    }
-
     #logoFooter .collabLabel {
       font-size: 16px;
       color: #666;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
+    }
+
+    #logoFooter .logoText {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #logoFooter span {
+      color: #4caf50;
     }
   </style>
 </head>
@@ -131,6 +135,10 @@
   <div id="finalMessage"></div>
   <button id="retryButton" onclick="startGame()">Yritä uudelleen</button>
 
+  <!-- HUIPPUPISTEET -->
+  <div id="highscore"></div>
+
+  <!-- LOGO -->
   <div id="logoFooter">
     <div class="collabLabel">Yhteistyössä:</div>
     <div class="logoText">Sami <span>×</span> ChatGPT</div>
@@ -148,8 +156,6 @@
       { name: "RUSKEA", value: "brown" },
       { name: "VIOLETTI", value: "purple" }
     ];
-
-    const answerColors = [...basicWordColors];
 
     const timeLevels = [
       5,5,4,4,3,3,2.5,2.5,2,2,1.5,1.5,1,1,0.5,0.5
@@ -182,25 +188,22 @@
       }
 
       const wordPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
-      const word = wordPool[Math.floor(Math.random() * wordPool.length)];
-
       const colorPool = index < 2 ? basicWordColors : [...basicWordColors, ...extraColors];
+
+      const word = wordPool[Math.floor(Math.random() * wordPool.length)];
       const color = colorPool[Math.floor(Math.random() * colorPool.length)];
       correctColor = color.value;
 
       document.getElementById("word").textContent = word.name;
       document.getElementById("word").style.color = color.value;
 
-      let buttonColors;
-      if(index < 2){
-        buttonColors = [...answerColors];
-      } else {
-        buttonColors = shuffleArray([...basicWordColors, ...extraColors]);
-        if(!buttonColors.slice(0,4).some(b => b.value === correctColor)){
-          buttonColors[0] = colorPool.find(b => b.value === correctColor);
-        }
-        buttonColors = buttonColors.slice(0,4);
+      let buttonColors = shuffleArray([...basicWordColors, ...extraColors]);
+
+      if (!buttonColors.slice(0,4).some(b => b.value === correctColor)) {
+        buttonColors[0] = colorPool.find(b => b.value === correctColor);
       }
+
+      buttonColors = buttonColors.slice(0,4);
 
       buttons.forEach((btn,i)=>{
         btn.textContent = buttonColors[i].name;
@@ -251,33 +254,44 @@
     function updateScore(){
       document.getElementById("score").textContent = `Pisteet: ${score} / 16`;
 
-      const storedHigh = localStorage.getItem('highscore');
-      if(!storedHigh || score>storedHigh){
-        localStorage.setItem('highscore',score);
+      let best = Number(localStorage.getItem("highscore")) || 0;
+      if(score > best){
+        best = score;
+        localStorage.setItem("highscore", best);
       }
+
+      document.getElementById("highscore").textContent =
+        `Parhaat pisteesi: ${best}`;
     }
 
     function endGame(message){
-      running=false;
+      running = false;
       clearInterval(timer);
-      document.getElementById("word").textContent="";
+      document.getElementById("word").textContent = "";
       document.getElementById("gameOver").textContent = message;
-      
-      let extra = score >= 10 ? " (Oho! Aika kovat pojot!)" : "";
-      document.getElementById("finalMessage").textContent = `Lopulliset pisteesi: ${score}${extra}`;
 
-      document.getElementById("retryButton").style.display="inline-block";
+      let extra = score >= 10 ? " (Oho! Aika kovat pojot!)" : "";
+      document.getElementById("finalMessage").textContent =
+        `Lopulliset pisteesi: ${score}${extra}`;
+
+      updateScore();
+      document.getElementById("retryButton").style.display = "inline-block";
     }
 
     function winGame(){
-      running=false;
+      running = false;
       clearInterval(timer);
-      document.getElementById("word").textContent="";
-      document.getElementById("gameOver").textContent="🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
-      document.getElementById("finalMessage").textContent = `Lopulliset pisteesi: ${score} (Oho! Aika kovat pojot!)`;
-      document.getElementById("retryButton").style.display="inline-block";
+      document.getElementById("word").textContent = "";
+      document.getElementById("gameOver").textContent =
+        "🎉 Täydet pisteet! Aivoissasi saattaa olla jotakin erikoista…";
+      document.getElementById("finalMessage").textContent =
+        "Lopulliset pisteesi: 16 (Oho! Aika kovat pojot!)";
+
+      updateScore();
+      document.getElementById("retryButton").style.display = "inline-block";
     }
 
+    updateScore();
     startGame();
   </script>
 
